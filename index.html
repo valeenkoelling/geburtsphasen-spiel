@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geburtsphasen — Zuordnungsspiel</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --c-latenz:      #5a9e8a;
+    --c-eroeffnung:  #d4813a;
+    --c-uebergang:   #7b5ea7;
+    --c-austritt:    #c0444a;
+    --c-nachgeburt:  #4a6fa5;
+    --bg-latenz:     #e8f4f0;
+    --bg-eroeffnung: #fdf3e7;
+    --bg-uebergang:  #f0eaf8;
+    --bg-austritt:   #fde8e8;
+    --bg-nachgeburt: #e8f0fd;
+    --ink:    #1e1e1e;
+    --muted:  #777;
+    --line:   #e0ddd8;
+    --white:  #ffffff;
+    --page:   #f7f6f3;
+  }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--page);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--ink);
+    color: var(--white);
+    padding: 20px 24px 16px;
+  }
+  .site-header .eyebrow {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 6px;
+    font-family: Arial, sans-serif;
+  }
+  .site-header h1 {
+    font-size: clamp(18px, 4vw, 26px);
+    font-weight: normal;
+    letter-spacing: 0.5px;
+  }
+  .lang-toggle {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .lang-btn {
+    padding: 5px 14px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: none;
+    color: var(--white);
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    transition: background 0.15s;
+  }
+  .lang-btn.active {
+    background: var(--white);
+    color: var(--ink);
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; padding: 24px 16px; max-width: 900px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* ── INTRO ── */
+  .intro-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--muted);
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+  .start-btn {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--white);
+    border: none;
+    padding: 13px 32px;
+    font-size: 14px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+  }
+
+  /* ── PROGRESS ── */
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--line);
+    margin-bottom: 24px;
+  }
+  .progress-bar-fill {
+    height: 3px;
+    background: var(--ink);
+    transition: width 0.3s;
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: Arial, sans-serif;
+    margin-bottom: 6px;
+  }
+
+  /* ── CARD ── */
+  .card-area {
+    margin-bottom: 28px;
+  }
+  .current-card {
+    background: var(--white);
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+    padding: 28px 24px;
+    font-size: 15px;
+    line-height: 1.7;
+    text-align: center;
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .current-card.partner-card {
+    font-style: italic;
+    border-style: dashed;
+  }
+  .partner-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  /* ── PHASE BUTTONS ── */
+  .phases-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    margin-bottom: 12px;
+  }
+  .phase-btns {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .phase-btn {
+    padding: 12px 10px;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .phase-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .phase-btn.correct { background: var(--bg); border-color: var(--col); color: var(--col); font-weight: bold; }
+  .phase-btn.wrong   { background: #fff0f0; border-color: #e0a0a0; color: #c05050; }
+
+  /* ── FEEDBACK ── */
+  .feedback {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: #edf7f4; color: #3a7a65; border-left: 3px solid #5a9e8a; }
+  .feedback.wrong   { background: #fdf0f0; color: #8a3a3a; border-left: 3px solid #c0444a; }
+
+  .next-btn {
+    margin-top: 18px;
+    display: none;
+    background: var(--ink);
+    color: var(--white);
+    border: none;
+    padding: 11px 28px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+  }
+  .next-btn.show { display: inline-block; }
+
+  /* ── RESULTS ── */
+  .result-summary {
+    text-align: center;
+    padding: 32px 0 24px;
+  }
+  .result-score {
+    font-size: clamp(36px, 8vw, 56px);
+    font-weight: normal;
+    letter-spacing: -1px;
+    color: var(--ink);
+  }
+  .result-score span { font-size: 0.45em; color: var(--muted); vertical-align: middle; }
+  .result-msg {
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 8px;
+  }
+
+  /* ── IMPULSE SECTION ── */
+  .impulse-heading {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    margin: 36px 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .impulse-card {
+    display: flex;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+  }
+  .impulse-color-bar {
+    width: 6px;
+    flex-shrink: 0;
+  }
+  .impulse-body {
+    padding: 16px 20px;
+    flex: 1;
+    background: var(--white);
+  }
+  .impulse-phase {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: Arial, sans-serif;
+    margin-bottom: 6px;
+  }
+  .impulse-text {
+    font-size: 14px;
+    line-height: 1.7;
+    font-style: italic;
+    color: var(--ink);
+  }
+
+  .restart-btn {
+    margin-top: 32px;
+    background: none;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    padding: 11px 28px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 500px) {
+    .phase-btns { grid-template-columns: 1fr 1fr; }
+    .current-card { font-size: 14px; padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="eyebrow" id="hdr-eyebrow">Geburtsvorbereitungskurs</div>
+  <h1 id="hdr-title">Geburtsphasen — Zuordnungsspiel</h1>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('de')">Deutsch</button>
+    <button class="lang-btn" onclick="setLang('en')">English</button>
+  </div>
+</header>
+
+<!-- INTRO -->
+<div id="screen-intro" class="screen active">
+  <p class="intro-text" id="intro-text">30 Karten, 5 Phasen — ordne jede Aussage der richtigen Geburtsphase zu. Am Ende siehst du die Auflösung und Gesprächsimpulse für dein Paar.</p>
+  <button class="start-btn" onclick="startGame()" id="start-btn">Spiel starten</button>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div class="progress-label" id="progress-label">Karte 1 von 30</div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill"></div></div>
+  <div class="card-area">
+    <div class="partner-label" id="partner-label" style="display:none"></div>
+    <div class="current-card" id="current-card"></div>
+  </div>
+  <div class="phases-label" id="phases-label">Welche Phase passt?</div>
+  <div class="phase-btns" id="phase-btns"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next-btn" id="next-btn" onclick="nextCard()"></button>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="result-summary">
+    <div class="result-score" id="result-score"></div>
+    <div class="result-msg" id="result-msg"></div>
+  </div>
+  <div class="impulse-heading" id="impulse-heading">Gesprächsimpulse für euch als Paar</div>
+  <div id="impulse-cards"></div>
+  <button class="restart-btn" onclick="restart()" id="restart-btn">Nochmal spielen</button>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+
+const PHASES = {
+  de: [
+    { id:'latenz',     label:'Latenzphase',      color:'var(--c-latenz)',     bg:'var(--bg-latenz)' },
+    { id:'eroeffnung', label:'Eröffnungsphase',   color:'var(--c-eroeffnung)', bg:'var(--bg-eroeffnung)' },
+    { id:'uebergang',  label:'Übergangsphase',    color:'var(--c-uebergang)',  bg:'var(--bg-uebergang)' },
+    { id:'austritt',   label:'Austrittsphase',    color:'var(--c-austritt)',   bg:'var(--bg-austritt)' },
+    { id:'nachgeburt', label:'Nachgeburtsphase',  color:'var(--c-nachgeburt)', bg:'var(--bg-nachgeburt)' },
+  ],
+  en: [
+    { id:'latenz',     label:'Early Labour',   color:'var(--c-latenz)',     bg:'var(--bg-latenz)' },
+    { id:'eroeffnung', label:'Active Labour',  color:'var(--c-eroeffnung)', bg:'var(--bg-eroeffnung)' },
+    { id:'uebergang',  label:'Transition',     color:'var(--c-uebergang)',  bg:'var(--bg-uebergang)' },
+    { id:'austritt',   label:'Pushing Phase',  color:'var(--c-austritt)',   bg:'var(--bg-austritt)' },
+    { id:'nachgeburt', label:'After Birth',    color:'var(--c-nachgeburt)', bg:'var(--bg-nachgeburt)' },
+  ]
+};
+
+const CARDS = {
+  de: [
+    { text:'Deine Wehen kommen noch unregelmäßig — alle 5–20 Min., etwa 20–40 Sek. lang', phase:'latenz', partner:false },
+    { text:'Du spürst Ziehen im Rücken oder Unterleib, vielleicht geht der Schleimpfropf ab', phase:'latenz', partner:false },
+    { text:'Du kannst noch reden, lachen, dich ablenken — das ist genau richtig so', phase:'latenz', partner:false },
+    { text:'Du bist aufgeregt, vielleicht ungeduldig: Ist das schon der Anfang?', phase:'latenz', partner:false },
+    { text:'Dein Baby dreht sich tiefer ins Becken und richtet sich aus', phase:'latenz', partner:false },
+    { text:'Deine Präsenz ist echte Unterstützung — sei da, sei ruhig, sei bei ihr', phase:'latenz', partner:true },
+    { text:'Deine Wehen kommen alle 3–5 Min., dauern 45–60 Sek. und werden deutlich stärker', phase:'eroeffnung', partner:false },
+    { text:'Dein Muttermund öffnet sich, die Fruchtblase kann platzen, du spürst Druck im Becken', phase:'eroeffnung', partner:false },
+    { text:'Du ziehst dich in der Wehe in dich zurück — Gespräche fallen schwer, das ist richtig so', phase:'eroeffnung', partner:false },
+    { text:'Du wechselst zwischen Kraft und Erschöpfung — dein Körper weiß, was er tut', phase:'eroeffnung', partner:false },
+    { text:'Dein Baby bewegt sich durch den Geburtskanal, der Druck auf den Muttermund nimmt zu', phase:'eroeffnung', partner:false },
+    { text:'Folge ihrem Rhythmus — Rückzug nach innen ist Kraft. Begleite ihre Atmung, bleib offen für das, was sie braucht', phase:'eroeffnung', partner:true },
+    { text:'Deine Wehen kommen alle 2–3 Min., dauern 60–90 Sek. — kaum Pause, maximale Intensität', phase:'uebergang', partner:false },
+    { text:'Du zitterst vielleicht, dir ist übel oder heiß — dein Körper gibt gerade alles', phase:'uebergang', partner:false },
+    { text:'Du kannst kaum noch sprechen und reagierst stark körperlich — das ist völlig normal', phase:'uebergang', partner:false },
+    { text:'Du fühlst dich vielleicht überwältigt: Das ist ein Zeichen — du bist gleich da!', phase:'uebergang', partner:false },
+    { text:'Dein Baby steht kurz vor dem vollständig geöffneten Muttermund', phase:'uebergang', partner:false },
+    { text:'Halt den Raum — kurze, klare, empowernde Worte reichen: Du schaffst das. Ich bin bei dir.', phase:'uebergang', partner:true },
+    { text:'Deine Presswehen kommen alle 3–5 Min. — du spürst einen starken Druck nach unten', phase:'austritt', partner:false },
+    { text:'Du spürst Brennen und Dehnen beim Durchtreten des Köpfchens — dein Körper öffnet sich', phase:'austritt', partner:false },
+    { text:'Du folgst deinem eigenen Körpergefühl beim Pressen — dein Instinkt führt dich', phase:'austritt', partner:false },
+    { text:'Du gibst alles — Erschöpfung und Triumph zugleich. Gleich ist es soweit.', phase:'austritt', partner:false },
+    { text:'Dein Baby dreht den Kopf, löst die Schultern — kommt Schritt für Schritt auf die Welt', phase:'austritt', partner:false },
+    { text:'Halte den Raum für Tönen, Bewegung, Halt und Kraft — ihr Körper kann das', phase:'austritt', partner:true },
+    { text:'Noch ein paar schwächere Wehen lösen die Plazenta — dein Körper schließt ab', phase:'nachgeburt', partner:false },
+    { text:'Du bist erschöpft, zitterst vielleicht, hast Hunger und Durst — du hast Großes geleistet', phase:'nachgeburt', partner:false },
+    { text:'Du brauchst jetzt Stille, Wärme und die Nähe deines Kindes — dieser Moment gehört dir', phase:'nachgeburt', partner:false },
+    { text:'Du bist vielleicht überwältigt, staunst, weinst, lachst — oder hast einfach Hunger', phase:'nachgeburt', partner:false },
+    { text:'Dein Baby sucht deinen Geruch und deine Stimme — die ersten Stunden des Bondings beginnen', phase:'nachgeburt', partner:false },
+    { text:'Schütz diesen Moment — Wärme, Essen, Trinken, Ruhe. Halt die Welt noch ein bisschen draußen', phase:'nachgeburt', partner:true },
+  ],
+  en: [
+    { text:'Your contractions are still irregular — every 5–20 min., lasting about 20–40 sec.', phase:'latenz', partner:false },
+    { text:'You feel pulling in your back or lower belly, your mucus plug may come away', phase:'latenz', partner:false },
+    { text:'You can still talk, laugh, distract yourself — that is exactly right', phase:'latenz', partner:false },
+    { text:'You feel excited, maybe impatient: is this really the beginning?', phase:'latenz', partner:false },
+    { text:'Your baby is moving deeper into the pelvis and getting into position', phase:'latenz', partner:false },
+    { text:'Your presence is real support — be there, be calm, be with her', phase:'latenz', partner:true },
+    { text:'Your contractions come every 3–5 min., last 45–60 sec. and grow noticeably stronger', phase:'eroeffnung', partner:false },
+    { text:'Your cervix is opening, your waters may break, you feel pressure in your pelvis', phase:'eroeffnung', partner:false },
+    { text:'You turn inward during contractions — talking is hard, and that is exactly right', phase:'eroeffnung', partner:false },
+    { text:'You move between power and exhaustion — your body knows what it is doing', phase:'eroeffnung', partner:false },
+    { text:'Your baby is moving through the birth canal, pressure on the cervix is increasing', phase:'eroeffnung', partner:false },
+    { text:'Follow her rhythm — turning inward is strength. Support her breathing, stay open to what she needs', phase:'eroeffnung', partner:true },
+    { text:'Your contractions come every 2–3 min., last 60–90 sec. — barely a break, maximum intensity', phase:'uebergang', partner:false },
+    { text:'You may shake, feel nauseous or hot — your body is giving everything right now', phase:'uebergang', partner:false },
+    { text:'You can hardly speak and react strongly in your body — this is completely normal', phase:'uebergang', partner:false },
+    { text:'You may feel overwhelmed: this is a sign — you are almost there!', phase:'uebergang', partner:false },
+    { text:'Your baby is close to the fully opened cervix', phase:'uebergang', partner:false },
+    { text:'Hold the space — short, clear, empowering words are enough: You are so strong. I am right here.', phase:'uebergang', partner:true },
+    { text:'Your pushing contractions come every 3–5 min. — you feel a strong downward pressure', phase:'austritt', partner:false },
+    { text:'You feel burning and stretching as the head crowns — your body is opening', phase:'austritt', partner:false },
+    { text:'You follow your own body sense when pushing — your instinct is guiding you', phase:'austritt', partner:false },
+    { text:'You are giving everything — exhaustion and triumph at once. It is almost time.', phase:'austritt', partner:false },
+    { text:'Your baby turns its head, releases its shoulders — coming into the world step by step', phase:'austritt', partner:false },
+    { text:'Hold the space for sounds, movement, grounding and strength — her body can do this', phase:'austritt', partner:true },
+    { text:'A few gentler contractions deliver the placenta — your body is completing its work', phase:'nachgeburt', partner:false },
+    { text:'You are exhausted, may be shaking, hungry and thirsty — you have done something immense', phase:'nachgeburt', partner:false },
+    { text:'You need quiet, warmth and closeness to your baby — this moment belongs to you', phase:'nachgeburt', partner:false },
+    { text:'You may feel overwhelmed, amazed, tearful, laughing — or simply hungry', phase:'nachgeburt', partner:false },
+    { text:'Your baby seeks your scent and your voice — the first hours of bonding begin', phase:'nachgeburt', partner:false },
+    { text:'Protect this moment — warmth, food, water, rest. Hold the world at bay a little longer', phase:'nachgeburt', partner:true },
+  ]
+};
+
+const IMPULSE = {
+  de: [
+    { phase:'latenz',     label:'Latenzphase',     color:'var(--c-latenz)',     text:'Was brauche ich von dir in dieser Phase, damit ich mich sicher fühle — ohne dass du mich unter Druck setzt?' },
+    { phase:'eroeffnung', label:'Eröffnungsphase',  color:'var(--c-eroeffnung)', text:'Wie kann ich dich körperlich unterstützen — und wie merke ich, wenn du gerade lieber Ruhe möchtest?' },
+    { phase:'uebergang',  label:'Übergangsphase',   color:'var(--c-uebergang)',  text:'Was kann ich sagen oder tun, wenn du sagst, du kannst nicht mehr — und was sollte ich auf keinen Fall tun?' },
+    { phase:'austritt',   label:'Austrittsphase',   color:'var(--c-austritt)',   text:'Was bedeutet es für dich, dabei zu sein, wenn unser Kind auf die Welt kommt — was möchtest du in diesem Moment tun oder sagen?' },
+    { phase:'nachgeburt', label:'Nachgeburtsphase', color:'var(--c-nachgeburt)', text:'Wie stellen wir uns unsere ersten gemeinsamen Minuten zu dritt vor — und was möchten wir in dieser Zeit schützen?' },
+  ],
+  en: [
+    { phase:'latenz',     label:'Early Labour',  color:'var(--c-latenz)',     text:'What do I need from you in this phase to feel safe — without feeling pressured?' },
+    { phase:'eroeffnung', label:'Active Labour', color:'var(--c-eroeffnung)', text:'How can you support me physically — and how will you know when I need space instead?' },
+    { phase:'uebergang',  label:'Transition',    color:'var(--c-uebergang)',  text:'What can you say or do when I say I can\'t go on — and what should you definitely not do?' },
+    { phase:'austritt',   label:'Pushing Phase', color:'var(--c-austritt)',   text:'What does it mean to you to be there when our baby comes into the world — what do you want to do or say in that moment?' },
+    { phase:'nachgeburt', label:'After Birth',   color:'var(--c-nachgeburt)', text:'How do we imagine our first minutes together as three — and what do we want to protect in that time?' },
+  ]
+};
+
+const UI = {
+  de: {
+    eyebrow: 'Geburtsvorbereitungskurs',
+    title: 'Geburtsphasen — Zuordnungsspiel',
+    intro: '30 Karten, 5 Phasen — ordne jede Aussage der richtigen Geburtsphase zu. Am Ende siehst du die Auflösung und Gesprächsimpulse für dein Paar.',
+    start: 'Spiel starten',
+    cardOf: (n,t) => `Karte ${n} von ${t}`,
+    whichPhase: 'Welche Phase passt?',
+    partnerLabel: 'Karte für Partner*innen / Begleitpersonen',
+    correct: '✓ Richtig!',
+    wrong: ph => `✗ Diese Aussage gehört zur ${ph}.`,
+    next: 'Weiter →',
+    impulseHeading: 'Gesprächsimpulse für euch als Paar',
+    restart: 'Nochmal spielen',
+    scoreMsg: n => n === 30 ? 'Alle richtig — perfekt!' : n >= 24 ? 'Sehr gut!' : n >= 18 ? 'Gut gemacht!' : 'Übt weiter — ihr schafft das!',
+  },
+  en: {
+    eyebrow: 'Birth Preparation Course',
+    title: 'Birth Phases — Sorting Game',
+    intro: '30 cards, 5 phases — match each statement to the right birth phase. At the end you will see the answers and conversation prompts for your couple.',
+    start: 'Start game',
+    cardOf: (n,t) => `Card ${n} of ${t}`,
+    whichPhase: 'Which phase does this belong to?',
+    partnerLabel: 'Card for partners / support persons',
+    correct: '✓ Correct!',
+    wrong: ph => `✗ This belongs to ${ph}.`,
+    next: 'Next →',
+    impulseHeading: 'Conversation prompts for your couple',
+    restart: 'Play again',
+    scoreMsg: n => n === 30 ? 'All correct — perfect!' : n >= 24 ? 'Very well done!' : n >= 18 ? 'Good work!' : 'Keep practising — you\'ve got this!',
+  }
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let lang = 'de';
+let deck = [];
+let current = 0;
+let score = 0;
+let answered = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(l)));
+  const u = UI[l];
+  document.getElementById('hdr-eyebrow').textContent = u.eyebrow;
+  document.getElementById('hdr-title').textContent = u.title;
+  document.getElementById('intro-text').textContent = u.intro;
+  document.getElementById('start-btn').textContent = u.start;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startGame() {
+  deck = shuffle(CARDS[lang]);
+  current = 0;
+  score = 0;
+  showScreen('screen-game');
+  renderCard();
+}
+
+function renderCard() {
+  const u = UI[lang];
+  const phases = PHASES[lang];
+  const card = deck[current];
+  answered = false;
+
+  document.getElementById('progress-label').textContent = u.cardOf(current+1, deck.length);
+  document.getElementById('progress-fill').style.width = ((current / deck.length) * 100) + '%';
+
+  const partnerLabel = document.getElementById('partner-label');
+  const cardEl = document.getElementById('current-card');
+  if (card.partner) {
+    partnerLabel.style.display = 'block';
+    partnerLabel.textContent = u.partnerLabel;
+    cardEl.classList.add('partner-card');
+  } else {
+    partnerLabel.style.display = 'none';
+    cardEl.classList.remove('partner-card');
+  }
+  cardEl.textContent = card.text;
+
+  document.getElementById('phases-label').textContent = u.whichPhase;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('next-btn').className = 'next-btn';
+  document.getElementById('next-btn').textContent = u.next;
+
+  const btns = document.getElementById('phase-btns');
+  btns.innerHTML = '';
+  phases.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'phase-btn';
+    btn.textContent = p.label;
+    btn.style.setProperty('--col', p.color);
+    btn.style.setProperty('--bg', p.bg);
+    btn.onclick = () => answer(p.id, btn);
+    btns.appendChild(btn);
+  });
+}
+
+function answer(phaseId, btn) {
+  if (answered) return;
+  answered = true;
+  const u = UI[lang];
+  const phases = PHASES[lang];
+  const card = deck[current];
+  const correct = phaseId === card.phase;
+  const correctPhase = phases.find(p => p.id === card.phase);
+
+  if (correct) {
+    score++;
+    btn.classList.add('correct');
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback correct show';
+    fb.textContent = u.correct;
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.phase-btn').forEach(b => {
+      if (b.textContent === correctPhase.label) b.classList.add('correct');
+    });
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback wrong show';
+    fb.textContent = u.wrong(correctPhase.label);
+  }
+
+  document.getElementById('next-btn').className = 'next-btn show';
+}
+
+function nextCard() {
+  current++;
+  if (current >= deck.length) {
+    showResults();
+  } else {
+    renderCard();
+  }
+}
+
+function showResults() {
+  const u = UI[lang];
+  showScreen('screen-results');
+
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('result-score').innerHTML = `${score} <span>/ ${deck.length}</span>`;
+  document.getElementById('result-msg').textContent = u.scoreMsg(score);
+  document.getElementById('impulse-heading').textContent = u.impulseHeading;
+  document.getElementById('restart-btn').textContent = u.restart;
+
+  const container = document.getElementById('impulse-cards');
+  container.innerHTML = '';
+  IMPULSE[lang].forEach(imp => {
+    const div = document.createElement('div');
+    div.className = 'impulse-card';
+    div.innerHTML = `
+      <div class="impulse-color-bar" style="background:${imp.color}"></div>
+      <div class="impulse-body">
+        <div class="impulse-phase" style="color:${imp.color}">${imp.label}</div>
+        <div class="impulse-text">\u201e${imp.text}\u201c</div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function restart() {
+  showScreen('screen-intro');
+}
+</script>
+</body>
+</html>
